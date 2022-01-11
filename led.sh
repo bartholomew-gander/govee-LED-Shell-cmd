@@ -2,39 +2,40 @@
 
 # Govee LED Toolkit v1.0
 # Please see LICENSE for distribution info.
-MAC="INSERT_MAC_HERE_WITHIN_DOUBLE_QUOTES"
+# MAC="INSERT_MAC_HERE_WITHIN_DOUBLE_QUOTES"
+
+if [ -z ${MAC+x} ]; then echo "Please set up MAC variable or bake it into script"; exit; fi
+HANDLE="0x0008" # For me 0x0003 and 0x0008 do not throw any warnings, but any handle seem to make device do stuff
+
+CMD="$1"
+PARAM="$2"
+
 
 # Turns LED strip on.
 # Usage:
 #           ./led.sh on
-if [ "$1" == "on" ]; then
-    gatttool -b $MAC --char-write-req --handle 0x0015 --value 3301010000000000000000000000000000000033 > /dev/null
+if [ "$CMD" == "on" ]; then
+    gatttool -b $MAC --char-write-req --handle $HANDLE --value 7e00040100000000ef > /dev/null
     echo "Govee LED Toolkit v1.0"
     echo "Turned LED strip on. Use './led.sh off' to turn off."
 
 # Turns LED strip off. DOES NOT set brightness to 0.
 # Usage:
 #           ./led.sh off
-elif [ "$1" == "off" ]; then
-    gatttool -b $MAC --char-write-req --handle 0x0015 --value 3301000000000000000000000000000000000032 > /dev/null
+elif [ "$CMD" == "off" ]; then
+    gatttool -b $MAC --char-write-req --handle $HANDLE --value 7e00040000000000ef > /dev/null
     echo "Govee LED Toolkit v1.0"
     echo "Turned LED strip off. Use './led.sh on' to turn on."
 
 # Set brightness to a percentage of 255 (0-100).
 # NOTE: Any percentage below 7 causes some LEDs to turn on, but not others; an inaccurate colour may be produced.
 # Usage:
-#           ./led.sh 25
-#           ./led.sh 64
-elif [ "$1" == "br" ]; then
-    decimal=$(awk -v percent=$2 'BEGIN{printf("%.2f\n",percent/100)}') # Convert percentage to decimal/fraction
-    hex_percent=$(awk -v decimal=$decimal 'BEGIN{printf("%x",255*decimal-1)}') # Calculate percentage of 255 using decimal, print as hex
-    if (( "$2" <= "6" )); then # Adds zero onto anything below decimal value of 16 (i.e: <= 0f) (~6% of 255 is 16, and it uses the percentage input) to allow it to be used. Would otherwise produce values such as 'e' or '4' instead of '0e' and '04'.
-        hex_percent="0${hex_percent}"
-    fi
-    check=$(printf '%x' $(( 0x33 ^ 0x04 ^ 16#$hex_percent ))) # XOR checksum calculation
-    wait
-    code=$(echo 3304${hex_percent}00000000000000000000000000000000${check}) # Zeros were being truncated for some reason; put code in separate variable to fix this
-    gatttool -b $MAC --char-write-req --handle 0x0015 --value $code > /dev/null #main gatttool command
+#           ./led.sh br 25
+#           ./led.sh br 64
+elif [ "$CMD" == "br" ]; then
+    pcnt=$PARAM # TODO: Add validation between 0 and 100 (0x64)
+    code=$(echo 7e0001${pcnt}00000000ef) # Zeros were being truncated for some reason; put code in separate variable to fix this
+    gatttool -b $MAC --char-write-req --handle $HANDLE --value $code > /dev/null #main gatttool command
     
 # Changes colour to specfied RGB values.
 # Usage:
@@ -42,10 +43,10 @@ elif [ "$1" == "br" ]; then
 # Examples:
 #           .led.sh colour 00 ff 00
 #           .led.sh colour d9 14 00
-elif [ "$1" == "colour" ]; then
+elif [ "$CMD" == "colour" ]; then
     check=$(printf '%x' $(( 0x33 ^ 0x05 ^ 0x02 ^ 16#$2 ^ 16#$3 ^ 16#$4 ))) #XOR checksum calculation
     wait # was to prevent hci0 problems, might remove
-    gatttool -b $MAC --char-write-req --handle 0x0015 --value 330502$2$3$400000000000000000000000000$check > /dev/null #main gatttool command
+    gatttool -b $MAC --char-write-req --handle $HANDLE --value 7e000503$2$3$400ef > /dev/null #main gatttool command
     echo "Changed colour to #"$2$3$4
 
 # Changes colour to a preset.
@@ -55,32 +56,32 @@ elif [ "$1" == "colour" ]; then
 # Examples:
 #           ./led.sh red
 #           ./led.sh purple
-elif [ "$1" == "red" ];then
-    gatttool -b $MAC --char-write-req --handle 0x0015 --value 330502FF000000000000000000000000000000CB > /dev/null
+elif [ "$CMD" == "red" ];then
+    gatttool -b $MAC --char-write-req --handle $HANDLE --value 7e000503FF000000ef > /dev/null
     echo "Changed colour to "$1
-elif [ "$1" == "orange" ];then
-    gatttool -b $MAC --char-write-req --handle 0x0015 --value 330502ff750000ff8912000000000000000000da > /dev/null
+elif [ "$CMD" == "orange" ];then
+    gatttool -b $MAC --char-write-req --handle $HANDLE --value 7e000503ff750000ef > /dev/null
     echo "Changed colour to "$1
-elif [ "$1" == "burnt_orange" ];then
-    gatttool -b $MAC --char-write-req --handle 0x0015 --value 330502d9140000000000000000000000000000f9 > /dev/null
+elif [ "$CMD" == "burnt_orange" ];then
+    gatttool -b $MAC --char-write-req --handle $HANDLE --value 7e000503d9140000ef > /dev/null
     echo "Changed colour to "$1
-elif [ "$1" == "yellow" ];then
-    gatttool -b $MAC --char-write-req --handle 0x0015 --value 330502ffff0000ff891200000000000000000050 > /dev/null
+elif [ "$CMD" == "yellow" ];then
+    gatttool -b $MAC --char-write-req --handle $HANDLE --value 7e000503ffff0000ef > /dev/null
     echo "Changed colour to "$1
-elif [ "$1" == "turq" ];then
-    gatttool -b $MAC --char-write-req --handle 0x0015 --value 33050200ffff00ff891200000000000000000050 > /dev/null
+elif [ "$CMD" == "turq" ];then
+    gatttool -b $MAC --char-write-req --handle $HANDLE --value 7e00050300ffff00ef > /dev/null
     echo "Changed colour to "$1
-elif [ "$1" == "green" ];then
-    gatttool -b $MAC --char-write-req --handle 0x0015 --value 33050200FF0000000000000000000000000000CB > /dev/null
+elif [ "$CMD" == "green" ];then
+    gatttool -b $MAC --char-write-req --handle $HANDLE --value 7e00050300FF0000ef > /dev/null
     echo "Changed colour to "$1
-elif [ "$1" == "blue" ];then
-    gatttool -b $MAC --char-write-req --handle 0x0015 --value 3305020000FF00000000000000000000000000CB > /dev/null
+elif [ "$CMD" == "blue" ];then
+    gatttool -b $MAC --char-write-req --handle $HANDLE --value 7e0005030000FF00ef > /dev/null
     echo "Changed colour to "$1
-elif [ "$1" == "purple" ];then
-    gatttool -b $MAC --char-write-req --handle 0x0015 --value 3305027500ff00ff8912000000000000000000da > /dev/null
+elif [ "$CMD" == "purple" ];then
+    gatttool -b $MAC --char-write-req --handle $HANDLE --value 7e0005037500ff00ef > /dev/null
     echo "Changed colour to "$1
-elif [ "$1" == "pink" ];then
-    gatttool -b $MAC --char-write-req --handle 0x0015 --value 330502ff00e300ff89120000000000000000004c > /dev/null
+elif [ "$CMD" == "pink" ];then
+    gatttool -b $MAC --char-write-req --handle $HANDLE --value 7e000503ff00e300ef > /dev/null
     echo "Changed colour to "$1
 else echo "Error: no valid option selected"
 fi

@@ -1,3 +1,12 @@
+Script modified for cheap BLEE RGB LED strip controller
+
+Commands via:
+https://github.com/arduino12/ble_rgb_led_strip_controller
+
+Below readme needs to be updated
+
+
+
 # govee-LED-Shell-cmd
 A simple shell script allowing communication to a Govee LED strip via [BLE](https://en.wikipedia.org/wiki/Bluetooth_Low_Energy).  
 An effort has been made to include as much detailed usage documentation to make this more beginner-friendly.  
